@@ -3,118 +3,949 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentieri di Trekking in Campania</title>
+    <title>Mappa Interattiva Trekking Campania</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-          crossorigin="" />
+          crossorigin=""/>
     
-    <!-- Font Awesome per icone -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c59 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(45, 90, 39, 0.95);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            margin-bottom: 0.5rem;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .stats {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 120px);
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .sidebar {
+            width: 380px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .filters {
+            margin-bottom: 2rem;
+        }
+
+        .filters h3 {
+            color: #2d5a27;
+            margin-bottom: 1.2rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .filter-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            color: #2d5a27;
+            font-size: 0.95rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.7rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #4a7c59;
+            box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+        }
+
+        .trail-list {
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .trail-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .trail-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .trail-list::-webkit-scrollbar-thumb {
+            background: #4a7c59;
+            border-radius: 3px;
+        }
+
+        .trail-item {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .trail-item:hover {
+            background: linear-gradient(145deg, #e8f5e8, #f0f8f0);
+            border-color: #4a7c59;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .trail-item.completed {
+            background: linear-gradient(145deg, #d4edda, #c3e6cb);
+            border-color: #28a745;
+        }
+
+        .trail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+        }
+
+        .trail-name {
+            font-weight: 700;
+            color: #2d5a27;
+            font-size: 1.1rem;
+            line-height: 1.3;
+        }
+
+        .difficulty-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .difficulty-T { background: linear-gradient(135deg, #28a745, #20c997); }
+        .difficulty-T-E { background: linear-gradient(135deg, #17a2b8, #20c997); }
+        .difficulty-E { background: linear-gradient(135deg, #ffc107, #fd7e14); color: #333; text-shadow: none; }
+        .difficulty-EE { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+        .difficulty-E-EE { background: linear-gradient(135deg, #6f42c1, #e83e8c); }
+
+        .trail-details {
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.5;
+            margin-bottom: 0.8rem;
+        }
+
+        .trail-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin: 0.8rem 0;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #eee;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.8rem;
+            transform: scale(1.3);
+            accent-color: #4a7c59;
+        }
+
+        .checkbox-container label {
+            font-weight: 600;
+            color: #4a7c59;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        #map {
+            flex: 1;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .reset-btn:hover {
+            background: linear-gradient(135deg, #c82333, #bd2130);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .no-results {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                gap: 0.5rem;
+                padding: 0.5rem;
+            }
+            
+            .sidebar {
+                width: 100%;
+                order: 2;
+                max-height: 60vh;
+            }
+            
+            #map {
+                height: 50vh;
+                order: 1;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .trail-stats {
+                grid-template-columns: 1fr;
+                gap: 0.3rem;
+            }
+        }
+
+        /* Stili per i popup della mappa */
+        .leaflet-popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .leaflet-popup-content h3 {
+            margin-bottom: 10px;
+            color: #2d5a27;
+            font-weight: 700;
+        }
+
+        .popup-checkbox-container {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .popup-checkbox-container label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #4a7c59;
+        }
+
+        .popup-checkbox-container input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.2);
+            accent-color: #4a7c59;
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="container">
-                <h1 class="header__title">
-                    <i class="fas fa-mountain"></i>
-                    Sentieri di Trekking in Campania
-                </h1>
-                <div class="header__stats">
-                    <div class="stats-badge">
-                        <span class="stats-badge__completed" id="completedCount">0</span>
-                        <span class="stats-badge__separator">/</span>
-                        <span class="stats-badge__total">26</span>
-                        <span class="stats-badge__label">sentieri completati</span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="sidebar__content">
-                    <!-- Filtri -->
-                    <section class="filters">
-                        <h3 class="filters__title">
-                            <i class="fas fa-filter"></i>
-                            Filtri
-                        </h3>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="difficultyFilter">DifficoltÃ :</label>
-                            <select class="form-select" id="difficultyFilter">
-                                <option value="">Tutte le difficoltÃ </option>
-                                <option value="T">T - Turistico</option>
-                                <option value="T/E">T/E - Turistico/Escursionistico</option>
-                                <option value="E">E - Escursionistico</option>
-                                <option value="EE">EE - Escursionisti Esperti</option>
-                                <option value="E/EE">E/EE - Escursionistico/Esperti</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="provinceFilter">Provincia:</label>
-                            <select class="form-select" id="provinceFilter">
-                                <option value="">Tutte le province</option>
-                                <option value="Napoli">Napoli</option>
-                                <option value="Salerno">Salerno</option>
-                                <option value="Avellino">Avellino</option>
-                                <option value="Benevento">Benevento</option>
-                                <option value="Caserta">Caserta</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="typeFilter">Tipologia:</label>
-                            <select class="form-select" id="typeFilter">
-                                <option value="">Tutte le tipologie</option>
-                                <option value="montagna">Montagna</option>
-                                <option value="vulcano">Vulcano</option>
-                                <option value="costiero">Costiero</option>
-                                <option value="fiume">Fiume</option>
-                            </select>
-                        </div>
-                        
-                        <button class="btn btn-secondary btn-block" id="resetFiltersBtn">
-                            <i class="fas fa-redo"></i> Reset Filtri
-                        </button>
-                    </section>
-                    
-                    <!-- Lista Sentieri -->
-                    <section class="trail-list">
-                        <h3 class="trail-list__title">
-                            <i class="fas fa-map-signs"></i>
-                            Sentieri
-                            <span class="trail-list__count" id="filteredTrailsCount">26</span>
-                        </h3>
-                        
-                        <div class="trails" id="trailsList">
-                            <!-- I sentieri verranno inseriti qui dinamicamente -->
-                        </div>
-                    </section>
-                </div>
-            </aside>
-            
-            <!-- Mappa -->
-            <main class="map-container">
-                <div id="map" class="map"></div>
-            </main>
+    <div class="header">
+        <h1>🥾 Trekking in Campania</h1>
+        <div class="stats">
+            <span id="completed-count">0</span> / <span id="total-count">26</span> sentieri completati
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+    <div class="container">
+        <div class="sidebar">
+            <div class="filters">
+                <h3>🔍 Filtri di Ricerca</h3>
+                
+                <div class="filter-group">
+                    <label for="difficulty-filter">Difficoltà:</label>
+                    <select id="difficulty-filter">
+                        <option value="">🎯 Tutte le difficoltà</option>
+                        <option value="T">🟢 T - Turistico</option>
+                        <option value="T/E">🔵 T/E - Turistico/Escursionistico</option>
+                        <option value="E">🟡 E - Escursionistico</option>
+                        <option value="EE">🔴 EE - Esperti</option>
+                        <option value="E/EE">🟣 E/EE - Escursionistico/Esperti</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="province-filter">Provincia:</label>
+                    <select id="province-filter">
+                        <option value="">🗺️ Tutte le province</option>
+                        <option value="Napoli">🌋 Napoli</option>
+                        <option value="Salerno">🏔️ Salerno</option>
+                        <option value="Benevento">⛰️ Benevento</option>
+                        <option value="Caserta">🏞️ Caserta</option>
+                        <option value="Avellino">🌲 Avellino</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="type-filter">Tipologia:</label>
+                    <select id="type-filter">
+                        <option value="">🏞️ Tutti i tipi</option>
+                        <option value="montagna">⛰️ Montagna</option>
+                        <option value="vulcano">🌋 Vulcano</option>
+                        <option value="costiero">🌊 Costiero</option>
+                        <option value="fiume">💧 Fiume</option>
+                    </select>
+                </div>
+
+                <button class="reset-btn" onclick="resetFilters()">🔄 Reset Filtri</button>
+            </div>
+
+            <div class="trail-list" id="trail-list">
+                <!-- I sentieri verranno inseriti qui dinamicamente -->
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
     
-    <!-- App JS -->
-    <script src="app.js"></script>
+    <script>
+        // Dati completi dei sentieri di trekking in Campania
+        const trails = [
+            {
+                id: 1,
+                name: "Sentiero degli Dei",
+                lat: 40.6340,
+                lng: 14.5273,
+                difficulty: "E",
+                length: "9 km",
+                duration: "4-5 ore",
+                elevation: "600m",
+                province: "Salerno",
+                area: "Monti Lattari",
+                type: "costiero",
+                description: "Il sentiero più famoso della Costiera Amalfitana, con panorami mozzafiato sul mare e vista su Capri."
+            },
+            {
+                id: 2,
+                name: "Gran Cono del Vesuvio",
+                lat: 40.8211,
+                lng: 14.4289,
+                difficulty: "T",
+                length: "1.5 km",
+                duration: "1-2 ore",
+                elevation: "140m",
+                province: "Napoli",
+                area: "Parco Nazionale del Vesuvio",
+                type: "vulcano",
+                description: "Salita al cratere del vulcano più famoso al mondo, con vista spettacolare sul Golfo di Napoli."
+            },
+            {
+                id: 3,
+                name: "Monte Faito",
+                lat: 40.6789,
+                lng: 14.5234,
+                difficulty: "E",
+                length: "8 km",
+                duration: "4 ore",
+                elevation: "800m",
+                province: "Napoli",
+                area: "Monti Lattari",
+                type: "montagna",
+                description: "Panorami spettacolari su Golfo di Napoli e Costiera Amalfitana dalla vetta a 1131m."
+            },
+            {
+                id: 4,
+                name: "Sentiero dei Limoni",
+                lat: 40.6267,
+                lng: 14.6089,
+                difficulty: "T",
+                length: "3 km",
+                duration: "2 ore",
+                elevation: "200m",
+                province: "Salerno",
+                area: "Costiera Amalfitana",
+                type: "costiero",
+                description: "Antica mulattiera tra i limoneti di Maiori e Minori, patrimonio UNESCO."
+            },
+            {
+                id: 5,
+                name: "Monte Cervati",
+                lat: 40.2456,
+                lng: 15.3789,
+                difficulty: "EE",
+                length: "12 km",
+                duration: "6-7 ore",
+                elevation: "1200m",
+                province: "Salerno",
+                area: "Parco Nazionale del Cilento",
+                type: "montagna",
+                description: "La vetta più alta della Campania (1899m) con vista panoramica su tutto il Cilento."
+            },
+            {
+                id: 6,
+                name: "Isola di Procida",
+                lat: 40.7589,
+                lng: 14.0234,
+                difficulty: "T",
+                length: "6 km",
+                duration: "3 ore",
+                elevation: "100m",
+                province: "Napoli",
+                area: "Isole Flegree",
+                type: "costiero",
+                description: "Giro dell'isola tra borghi colorati e calette nascoste, Capitale della Cultura 2022."
+            },
+            {
+                id: 7,
+                name: "Monte Epomeo - Ischia",
+                lat: 40.7234,
+                lng: 13.8967,
+                difficulty: "E",
+                length: "5 km",
+                duration: "3 ore",
+                elevation: "600m",
+                province: "Napoli",
+                area: "Isola d'Ischia",
+                type: "vulcano",
+                description: "La vetta più alta di Ischia (789m) con vista a 360° su tutto l'arcipelago campano."
+            },
+            {
+                id: 8,
+                name: "Punta Campanella",
+                lat: 40.5834,
+                lng: 14.3456,
+                difficulty: "EE",
+                length: "7 km",
+                duration: "4 ore",
+                elevation: "400m",
+                province: "Napoli",
+                area: "Penisola Sorrentina",
+                type: "costiero",
+                description: "Estremità della penisola con vista privilegiata su Capri e riserva marina protetta."
+            },
+            {
+                id: 9,
+                name: "Valle delle Ferriere",
+                lat: 40.7456,
+                lng: 14.6123,
+                difficulty: "E",
+                length: "6 km",
+                duration: "3-4 ore",
+                elevation: "300m",
+                province: "Salerno",
+                area: "Monti Lattari",
+                type: "fiume",
+                description: "Riserva naturale con cascate e vegetazione subtropicale, habitat della salamandra dagli occhiali."
+            },
+            {
+                id: 10,
+                name: "Monte Nuovo - Pozzuoli",
+                lat: 40.8367,
+                lng: 14.1234,
+                difficulty: "T",
+                length: "2 km",
+                duration: "1 ora",
+                elevation: "140m",
+                province: "Napoli",
+                area: "Campi Flegrei",
+                type: "vulcano",
+                description: "Il vulcano più giovane d'Europa, nato nel 1538 in soli 8 giorni di eruzione."
+            },
+            {
+                id: 11,
+                name: "Pizzo San Michele (Molare)",
+                lat: 40.6789,
+                lng: 14.5456,
+                difficulty: "E",
+                length: "10 km",
+                duration: "5 ore",
+                elevation: "900m",
+                province: "Napoli",
+                area: "Monti Lattari",
+                type: "montagna",
+                description: "Una delle vette più panoramiche dei Monti Lattari (1444m) con vista su tre golfi."
+            },
+            {
+                id: 12,
+                name: "Sentiero delle Acque",
+                lat: 40.7234,
+                lng: 15.0123,
+                difficulty: "T/E",
+                length: "8 km",
+                duration: "4 ore",
+                elevation: "400m",
+                province: "Avellino",
+                area: "Monti Picentini",
+                type: "fiume",
+                description: "Percorso lungo torrenti e cascate naturali nel cuore dei Monti Picentini."
+            },
+            {
+                id: 13,
+                name: "Isola di Vivara",
+                lat: 40.7456,
+                lng: 14.0567,
+                difficulty: "T",
+                length: "2 km",
+                duration: "1.5 ore",
+                elevation: "50m",
+                province: "Napoli",
+                area: "Isole Flegree",
+                type: "costiero",
+                description: "Riserva naturale con avifauna protetta, collegata a Procida da un ponte."
+            },
+            {
+                id: 14,
+                name: "Monte Terminio",
+                lat: 40.8123,
+                lng: 15.0789,
+                difficulty: "E",
+                length: "12 km",
+                duration: "6 ore",
+                elevation: "1000m",
+                province: "Avellino",
+                area: "Monti Picentini",
+                type: "montagna",
+                description: "Vetta principale dei Monti Picentini (1783m) con faggete secolari e panorami appenninici."
+            },
+            {
+                id: 15,
+                name: "Cratere della Solfatara",
+                lat: 40.8267,
+                lng: 14.1389,
+                difficulty: "T",
+                length: "1 km",
+                duration: "1 ora",
+                elevation: "50m",
+                province: "Napoli",
+                area: "Campi Flegrei",
+                type: "vulcano",
+                description: "Vulcano semi-attivo con fumarole e fenomeni geotermici, laboratorio naturale di vulcanologia."
+            },
+            {
+                id: 16,
+                name: "Sentiero CAI 300 - Vesuvio",
+                lat: 40.8156,
+                lng: 14.4234,
+                difficulty: "E",
+                length: "11 km",
+                duration: "5 ore",
+                elevation: "800m",
+                province: "Napoli",
+                area: "Parco Nazionale del Vesuvio",
+                type: "vulcano",
+                description: "Giro completo del vulcano attraverso antiche colate laviche e pinete di pino nero."
+            },
+            {
+                id: 17,
+                name: "Monte Taburno",
+                lat: 41.1234,
+                lng: 14.6789,
+                difficulty: "E",
+                length: "9 km",
+                duration: "5 ore",
+                elevation: "700m",
+                province: "Benevento",
+                area: "Monti del Taburno",
+                type: "montagna",
+                description: "Massiccio calcareo con grotte e doline carsiche, regno dei rapaci e della flora appenninica."
+            },
+            {
+                id: 18,
+                name: "Gole del Calore",
+                lat: 40.4567,
+                lng: 15.2345,
+                difficulty: "T/E",
+                length: "7 km",
+                duration: "4 ore",
+                elevation: "300m",
+                province: "Salerno",
+                area: "Parco Nazionale del Cilento",
+                type: "fiume",
+                description: "Canyon naturale lungo il fiume Calore con piscine naturali e vegetazione mediterranea."
+            },
+            {
+                id: 19,
+                name: "Monte Camposauro",
+                lat: 41.0789,
+                lng: 14.7123,
+                difficulty: "E",
+                length: "8 km",
+                duration: "4 ore",
+                elevation: "600m",
+                province: "Benevento",
+                area: "Monti del Taburno",
+                type: "montagna",
+                description: "Vetta panoramica (1388m) con vista sulla valle del Volturno e il Matese."
+            },
+            {
+                id: 20,
+                name: "Sentiero CAI 1 - Vesuvio",
+                lat: 40.8089,
+                lng: 14.4156,
+                difficulty: "E",
+                length: "6 km",
+                duration: "3 ore",
+                elevation: "500m",
+                province: "Napoli",
+                area: "Parco Nazionale del Vesuvio",
+                type: "vulcano",
+                description: "Attraversamento della Riserva Tirone-Alto Vesuvio tra ginestre e panorami vulcanici."
+            },
+            {
+                id: 21,
+                name: "Monte Matese",
+                lat: 41.3456,
+                lng: 14.3789,
+                difficulty: "E/EE",
+                length: "15 km",
+                duration: "7 ore",
+                elevation: "1200m",
+                province: "Caserta",
+                area: "Parco del Matese",
+                type: "montagna",
+                description: "Massiccio montuoso al confine con il Molise, regno dell'aquila reale e del lupo appenninico."
+            },
+            {
+                id: 22,
+                name: "Lago del Matese",
+                lat: 41.3234,
+                lng: 14.3567,
+                difficulty: "T/E",
+                length: "8 km",
+                duration: "4 ore",
+                elevation: "400m",
+                province: "Caserta",
+                area: "Parco del Matese",
+                type: "montagna",
+                description: "Giro del lago carsico più grande del Sud Italia (1050m slm) con avifauna acquatica."
+            },
+            {
+                id: 23,
+                name: "Monte Accellica",
+                lat: 41.0567,
+                lng: 14.6234,
+                difficulty: "E",
+                length: "10 km",
+                duration: "5 ore",
+                elevation: "800m",
+                province: "Benevento",
+                area: "Monti del Taburno",
+                type: "montagna",
+                description: "Vetta del massiccio del Taburno-Camposauro (1660m) con faggete e praterie d'alta quota."
+            },
+            {
+                id: 24,
+                name: "Sentiero CAI 5 - Vesuvio",
+                lat: 40.8234,
+                lng: 14.4067,
+                difficulty: "T/E",
+                length: "4 km",
+                duration: "2 ore",
+                elevation: "300m",
+                province: "Napoli",
+                area: "Parco Nazionale del Vesuvio",
+                type: "vulcano",
+                description: "Percorso attraverso la pineta vesuviana con osservazione della flora pioniera su lava."
+            },
+            {
+                id: 25,
+                name: "Oasi WWF Cratere degli Astroni",
+                lat: 40.8456,
+                lng: 14.1567,
+                difficulty: "T",
+                length: "3 km",
+                duration: "2 ore",
+                elevation: "100m",
+                province: "Napoli",
+                area: "Campi Flegrei",
+                type: "vulcano",
+                description: "Cratere vulcanico trasformato in oasi naturale con tre laghi e ricca biodiversità."
+            },
+            {
+                id: 26,
+                name: "Monte Bulgheria",
+                lat: 40.1789,
+                lng: 15.4123,
+                difficulty: "E",
+                length: "11 km",
+                duration: "6 ore",
+                elevation: "900m",
+                province: "Salerno",
+                area: "Parco Nazionale del Cilento",
+                type: "montagna",
+                description: "Massiccio calcareo (1225m) con vista sul Golfo di Policastro e grotte carsiche."
+            }
+        ];
+
+        // Variabili globali
+        let map;
+        let markers = [];
+        let filteredTrails = [...trails];
+
+        // Colori per difficoltà
+        const difficultyColors = {
+            'T': '#28a745',
+            'T/E': '#17a2b8',
+            'E': '#ffc107',
+            'EE': '#dc3545',
+            'E/EE': '#6f42c1'
+        };
+
+        // Funzione per creare icone personalizzate
+        function createCustomIcon(difficulty) {
+            const color = difficultyColors[difficulty];
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="
+                    background: linear-gradient(135deg, ${color}, ${color}dd);
+                    width: 30px; 
+                    height: 30px; 
+                    border-radius: 50%; 
+                    border: 3px solid white; 
+                    box-shadow: 0 3px 10px rgba(0,0,0,0.3); 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    color: ${difficulty === 'E' ? '#333' : 'white'}; 
+                    font-weight: bold; 
+                    font-size: 11px;
+                    font-family: 'Segoe UI', sans-serif;
+                ">${difficulty}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+
+        // Funzione per aggiungere marker alla mappa
+        function addMarkersToMap(trailsToShow = trails) {
+            // Rimuovi marker esistenti
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            trailsToShow.forEach(trail => {
+                const marker = L.marker([trail.lat, trail.lng], {
+                    icon: createCustomIcon(trail.difficulty)
+                }).addTo(map);
+
+                const popupContent = `
+                    <div style="min-width: 280px; font-family: 'Segoe UI', sans-serif;">
+                        <h3 style="color: #2d5a27; margin-bottom: 12px; font-size: 1.2rem; font-weight: 700;">${trail.name}</h3>
+                        <div style="margin-bottom: 8px;"><strong>📍 Area:</strong> ${trail.area}</div>
+                        <div style="margin-bottom: 8px;"><strong>📏 Lunghezza:</strong> ${trail.length}</div>
+                        <div style="margin-bottom: 8px;"><strong>⏱️ Durata:</strong> ${trail.duration}</div>
+                        <div style="margin-bottom: 8px;"><strong>📈 Dislivello:</strong> ${trail.elevation}</div>
+                        <div style="margin-bottom: 8px;"><strong>🎯 Difficoltà:</strong> <span class="difficulty-badge difficulty-${trail.difficulty.replace('/', '-')}" style="padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; color: white; background: ${difficultyColors[trail.difficulty]};">${trail.difficulty}</span></div>
+                        <div style="margin-bottom: 8px;"><strong>🏔️ Tipo:</strong> ${trail.type}</div>
+                        <div style="margin: 12px 0; font-style: italic; color: #555; line-height: 1.4;">${trail.description}</div>
+                        <div class="popup-checkbox-container">
+                            <label>
+                                <input type="checkbox" id="popup-checkbox-${trail.id}" ${isTrailCompleted(trail.id) ? 'checked' : ''} onchange="toggleTrailCompletion(${trail.id})">
+                                <span>✅ Percorso completato</span>
+                            </label>
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent, {
+                    maxWidth: 350,
+                    className: 'custom-popup'
+                });
+                markers.push(marker);
+            });
+        }
+
+        // Funzione per renderizzare la lista dei sentieri
+        function renderTrailList(trailsToShow = trails) {
+            const trailList = document.getElementById('trail-list');
+            
+            if (trailsToShow.length === 0) {
+                trailList.innerHTML = '<div class="no-results">🔍 Nessun sentiero trovato con i filtri selezionati.<br>Prova a modificare i criteri di ricerca.</div>';
+                return;
+            }
+
+            trailList.innerHTML = trailsToShow.map(trail => `
+                <div class="trail-item ${isTrailCompleted(trail.id) ? 'completed' : ''}" id="trail-${trail.id}" onclick="focusOnTrail(${trail.lat}, ${trail.lng})">
+                    <div class="trail-header">
+                        <div class="trail-name">${trail.name}</div>
+                        <div class="difficulty-badge difficulty-${trail.difficulty.replace('/', '-')}">${trail.difficulty}</div>
+                    </div>
+                    <div class="trail-stats">
+                        <div>📏 ${trail.length}</div>
+                        <div>⏱️ ${trail.duration}</div>
+                        <div>📈 ${trail.elevation}</div>
+                        <div>📍 ${trail.province}</div>
+                    </div>
+                    <div class="trail-details">
+                        <strong>Area:</strong> ${trail.area}<br>
+                        <strong>Tipo:</strong> ${trail.type}<br>
+                        <em>${trail.description}</em>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="checkbox-${trail.id}" ${isTrailCompleted(trail.id) ? 'checked' : ''} onchange="toggleTrailCompletion(${trail.id})" onclick="event.stopPropagation()">
+                        <label for="checkbox-${trail.id}">✅ Completato</label>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Funzione per focalizzare sulla mappa
+        function focusOnTrail(lat, lng) {
+            map.setView([lat, lng], 13);
+        }
+
+        // Funzioni per gestire il completamento dei sentieri
+        function isTrailCompleted(trailId) {
+            const completed = JSON.parse(localStorage.getItem('completedTrails') || '[]');
+            return completed.includes(trailId);
+        }
+
+        function toggleTrailCompletion(trailId) {
+            let completed = JSON.parse(localStorage.getItem('completedTrails') || '[]');
+            
+            if (completed.includes(trailId)) {
+                completed = completed.filter(id => id !== trailId);
+            } else {
+                completed.push(trailId);
+            }
+            
+            localStorage.setItem('completedTrails', JSON.stringify(completed));
+            updateUI();
+        }
+
+        function updateUI() {
+            const completedCount = JSON.parse(localStorage.getItem('completedTrails') || '[]').length;
+            document.getElementById('completed-count').textContent = completedCount;
+            renderTrailList(filteredTrails);
+            
+            // Aggiorna checkbox nei popup
+            trails.forEach(trail => {
+                const popupCheckbox = document.getElementById(`popup-checkbox-${trail.id}`);
+                if (popupCheckbox) {
+                    popupCheckbox.checked = isTrailCompleted(trail.id);
+                }
+            });
+        }
+
+        // Funzioni per i filtri
+        function applyFilters() {
+            const difficultyFilter = document.getElementById('difficulty-filter').value;
+            const provinceFilter = document.getElementById('province-filter').value;
+            const typeFilter = document.getElementById('type-filter').value;
+
+            filteredTrails = trails.filter(trail => {
+                return (!difficultyFilter || trail.difficulty === difficultyFilter) &&
+                       (!provinceFilter || trail.province === provinceFilter) &&
+                       (!typeFilter || trail.type === typeFilter);
+            });
+
+            renderTrailList(filteredTrails);
+            addMarkersToMap(filteredTrails);
+        }
+
+        function resetFilters() {
+            document.getElementById('difficulty-filter').value = '';
+            document.getElementById('province-filter').value = '';
+            document.getElementById('type-filter').value = '';
+            
+            filteredTrails = [...trails];
+            renderTrailList(filteredTrails);
+            addMarkersToMap(filteredTrails);
+        }
+
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inizializza la mappa
+            map = L.map('map').setView([40.8518, 14.2681], 9);
+
+            // Aggiungi tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Aggiungi controlli della mappa
+            map.addControl(L.control.scale());
+
+            // Inizializza contenuti
+            addMarkersToMap();
+            renderTrailList();
+            updateUI();
+
+            // Event listeners per i filtri
+            document.getElementById('difficulty-filter').addEventListener('change', applyFilters);
+            document.getElementById('province-filter').addEventListener('change', applyFilters);
+            document.getElementById('type-filter').addEventListener('change', applyFilters);
+
+            console.log('🥾 Mappa Trekking Campania caricata con successo!');
+            console.log(`📊 ${trails.length} sentieri disponibili`);
+        });
+    </script>
 </body>
 </html>
